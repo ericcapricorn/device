@@ -6,8 +6,8 @@ import (
 )
 
 func TearDown(store *DeviceStorage) {
-	store.Clean("home_info")
-	store.Clean("home_members")
+	store.Clean(domain, "home_info")
+	store.Clean(domain, "home_members")
 	store.Destory()
 }
 
@@ -17,12 +17,12 @@ var fakeUid int64 = 100
 func CreateHome(uid int64, store *DeviceStorage) (int64, error) {
 	// create a home at first
 	home := NewHomeManager(store)
-	err := home.Create(int64(uid), "home")
+	err := home.Create(domain, int64(uid), "home")
 	if err != nil {
 		fmt.Print("create home failed", err)
 		return -1, err
 	}
-	list, err := home.GetAllHome(uid)
+	list, err := home.GetAllHome(domain, uid)
 	if err != nil || len(list) != 1 {
 		fmt.Print("get user all home failed", err)
 		return -1, err
@@ -31,7 +31,7 @@ func CreateHome(uid int64, store *DeviceStorage) (int64, error) {
 }
 
 func TestAddMember(t *testing.T) {
-	store := NewDeviceStorage(host, user, password, domain, database)
+	store := NewDeviceStorage(host, user, password, database)
 	if store == nil {
 		t.Errorf("init storage failed")
 	}
@@ -39,19 +39,19 @@ func TestAddMember(t *testing.T) {
 	defer TearDown(store)
 
 	// add owner
-	err := manager.AddOwner("owner", fakeHid, fakeUid)
+	err := manager.AddOwner(domain, "owner", fakeHid, fakeUid)
 	if err != nil {
 		t.Error("add owner failed", err)
 	}
 	// home not exist
 	for i := 0; i < 10; i++ {
-		err = manager.AddMember("guest", fakeHid, fakeUid)
+		err = manager.AddMember(domain, "guest", fakeHid, fakeUid)
 		if err == nil {
 			t.Error("add guest failed", err)
 		}
 	}
 	for i := 0; i < 10; i++ {
-		err = manager.AddMember("guest", fakeHid, int64(i+1))
+		err = manager.AddMember(domain, "guest", fakeHid, int64(i+1))
 		if err == nil {
 			t.Error("add guest failed", err)
 		}
@@ -64,13 +64,13 @@ func TestAddMember(t *testing.T) {
 	}
 
 	// valid home id add owner as member return succ
-	err = manager.AddMember("guest", validHid, fakeUid)
+	err = manager.AddMember(domain, "guest", validHid, fakeUid)
 	if err != nil {
 		t.Error("add owner oneself failed", err)
 	}
 
 	for i := 0; i < 10; i++ {
-		err = manager.AddMember("guest", validHid, int64(i+1))
+		err = manager.AddMember(domain, "guest", validHid, int64(i+1))
 		if err != nil {
 			t.Error("add guest failed", err)
 		}
@@ -78,14 +78,14 @@ func TestAddMember(t *testing.T) {
 }
 
 func TestDeleteMember(t *testing.T) {
-	store := NewDeviceStorage(host, user, password, domain, database)
+	store := NewDeviceStorage(host, user, password, database)
 	if store == nil {
 		t.Error("init storage failed")
 	}
 	manager := NewMemberManager(store)
 	defer TearDown(store)
 	// home not exist, member not exist too
-	err := manager.Delete(fakeHid, fakeUid)
+	err := manager.Delete(domain, fakeHid, fakeUid)
 	if err == nil {
 		t.Error("delete not exist hid failed")
 	}
@@ -96,19 +96,19 @@ func TestDeleteMember(t *testing.T) {
 	}
 	// add member to the valid hid
 	for i := 0; i < 10; i++ {
-		err = manager.AddMember("guest", validHid, int64(i+1))
+		err = manager.AddMember(domain, "guest", validHid, int64(i+1))
 		if err != nil {
 			t.Error("add guest failed", err)
 		}
 	}
 	// delete exist uid
 	for i := 0; i < 10; i++ {
-		err = manager.Delete(validHid, int64(i+1))
+		err = manager.Delete(domain, validHid, int64(i+1))
 		if err != nil {
 			t.Error("delete the user failed", err)
 		}
 		// home exist, member not exist
-		err = manager.Delete(validHid, int64(i+1))
+		err = manager.Delete(domain, validHid, int64(i+1))
 		if err != nil {
 			t.Error("delete the user failed", err)
 		}
@@ -116,7 +116,7 @@ func TestDeleteMember(t *testing.T) {
 }
 
 func TestGetMemberInfo(t *testing.T) {
-	store := NewDeviceStorage(host, user, password, domain, database)
+	store := NewDeviceStorage(host, user, password, database)
 	if store == nil {
 		t.Error("init storage failed")
 	}
@@ -130,11 +130,11 @@ func TestGetMemberInfo(t *testing.T) {
 	var member *Member
 	for i := 0; i < 10; i++ {
 		name := fmt.Sprintf("guest%d", i)
-		err = manager.AddMember(name, validHid, int64(i+1))
+		err = manager.AddMember(domain, name, validHid, int64(i+1))
 		if err != nil {
 			t.Error("add guest failed", err)
 		}
-		member, err = manager.Get(validHid, int64(i+1))
+		member, err = manager.Get(domain, validHid, int64(i+1))
 		if err != nil {
 			t.Error("get guest member failed", err)
 		} else if member == nil {
@@ -152,14 +152,14 @@ func TestGetMemberInfo(t *testing.T) {
 		}
 	}
 	// invalid hid
-	member, err = manager.Get(fakeHid, member.uid)
+	member, err = manager.Get(domain, fakeHid, member.uid)
 	if err != nil {
 		t.Error("get home member failed")
 	} else if member != nil {
 		t.Error("should not get not exist home's member")
 	}
 	// valid hid not exist member info
-	member, err = manager.Get(validHid, 10000000)
+	member, err = manager.Get(domain, validHid, 10000000)
 	if err != nil {
 		t.Error("get not exist member failed")
 	} else if member != nil {
@@ -168,7 +168,7 @@ func TestGetMemberInfo(t *testing.T) {
 }
 
 func TestAllMember(t *testing.T) {
-	store := NewDeviceStorage(host, user, password, domain, database)
+	store := NewDeviceStorage(host, user, password, database)
 	if store == nil {
 		t.Error("init storage failed")
 	}
@@ -176,7 +176,7 @@ func TestAllMember(t *testing.T) {
 	defer TearDown(store)
 
 	// not exist hid, return empty list
-	list, err := manager.GetAllMembers(fakeHid)
+	list, err := manager.GetAllMembers(domain, fakeHid)
 	if err != nil {
 		t.Error("get fake hid members failed")
 	} else if list == nil || len(list) != 0 {
@@ -184,7 +184,7 @@ func TestAllMember(t *testing.T) {
 	}
 
 	// not exist but return succ
-	err = manager.DeleteAllMembers(fakeHid)
+	err = manager.DeleteAllMembers(domain, fakeHid)
 	if err != nil {
 		t.Error("delete not exist home members failed", err)
 	}
@@ -196,7 +196,7 @@ func TestAllMember(t *testing.T) {
 	}
 
 	// no members return empty list
-	list, err = manager.GetAllMembers(validHid)
+	list, err = manager.GetAllMembers(domain, validHid)
 	if err != nil {
 		t.Error("get all members failed", err)
 	} else if list == nil {
@@ -206,13 +206,13 @@ func TestAllMember(t *testing.T) {
 	// add member
 	for i := 0; i < 10; i++ {
 		name := fmt.Sprintf("guest%d", i)
-		err = manager.AddMember(name, validHid, int64(i+1))
+		err = manager.AddMember(domain, name, validHid, int64(i+1))
 		if err != nil {
 			t.Error("add guest failed", err)
 		}
 	}
 	// get all
-	list, err = manager.GetAllMembers(validHid)
+	list, err = manager.GetAllMembers(domain, validHid)
 	if err != nil {
 		t.Error("get all member failed", err)
 	} else if list == nil || len(list) != 11 {
@@ -220,12 +220,12 @@ func TestAllMember(t *testing.T) {
 	}
 
 	// delete all
-	err = manager.DeleteAllMembers(validHid)
+	err = manager.DeleteAllMembers(domain, validHid)
 	if err != nil {
 		t.Error("delete all members failed", err)
 	}
 	// get all again
-	list, err = manager.GetAllMembers(validHid)
+	list, err = manager.GetAllMembers(domain, validHid)
 	if err != nil {
 		t.Error("get all member failed", err)
 	} else if list == nil || len(list) != 0 {
@@ -234,7 +234,7 @@ func TestAllMember(t *testing.T) {
 }
 
 func TestModifyMemberName(t *testing.T) {
-	store := NewDeviceStorage(host, user, password, domain, database)
+	store := NewDeviceStorage(host, user, password, database)
 	if store == nil {
 		t.Error("init storage failed")
 	}
@@ -242,7 +242,7 @@ func TestModifyMemberName(t *testing.T) {
 	defer TearDown(store)
 
 	// hid not exist
-	err := manager.ModifyName(fakeHid, fakeUid, "fakeName")
+	err := manager.ModifyName(domain, fakeHid, fakeUid, "fakeName")
 	if err == nil {
 		t.Error("modify not exist hid, uid succ")
 	}
@@ -254,7 +254,7 @@ func TestModifyMemberName(t *testing.T) {
 	}
 
 	// hid exist but uid not exist
-	err = manager.ModifyName(validHid, fakeUid+1, "fakeName")
+	err = manager.ModifyName(domain, validHid, fakeUid+1, "fakeName")
 	if err == nil {
 		t.Error("modify not exist uid succ")
 	}
@@ -262,17 +262,17 @@ func TestModifyMemberName(t *testing.T) {
 	// modify member name
 	for i := 0; i < 10; i++ {
 		name := fmt.Sprintf("guest%d", i)
-		err = manager.AddMember(name, validHid, int64(i+1))
+		err = manager.AddMember(domain, name, validHid, int64(i+1))
 		if err != nil {
 			t.Error("add guest failed", err)
 		}
 		newName := fmt.Sprintf("%dguest", i)
-		err = manager.ModifyName(validHid, int64(i+1), newName)
+		err = manager.ModifyName(domain, validHid, int64(i+1), newName)
 		if err != nil {
 			t.Error("modify name failed", err)
 		}
 		// check the new name
-		member, err := manager.Get(validHid, int64(i+1))
+		member, err := manager.Get(domain, validHid, int64(i+1))
 		if err != nil {
 			t.Error("get member failed", err)
 		} else if member == nil || member.GetMemberName() != newName {
@@ -282,7 +282,7 @@ func TestModifyMemberName(t *testing.T) {
 }
 
 func TestEnableMember(t *testing.T) {
-	store := NewDeviceStorage(host, user, password, domain, database)
+	store := NewDeviceStorage(host, user, password, database)
 	if store == nil {
 		t.Error("init storage failed")
 	}
@@ -290,12 +290,12 @@ func TestEnableMember(t *testing.T) {
 	defer TearDown(store)
 
 	// hid not exist
-	err := manager.Enable(fakeHid, fakeUid)
+	err := manager.Enable(domain, fakeHid, fakeUid)
 	if err == nil {
 		t.Error("enable not exist hid, uid succ")
 	}
 
-	err = manager.Disable(fakeHid, fakeUid)
+	err = manager.Disable(domain, fakeHid, fakeUid)
 	if err == nil {
 		t.Error("disable not exist hid, uid succ")
 	}
@@ -307,12 +307,12 @@ func TestEnableMember(t *testing.T) {
 	}
 
 	// hid exist but uid not exist
-	err = manager.Enable(validHid, fakeUid+1)
+	err = manager.Enable(domain, validHid, fakeUid+1)
 	if err == nil {
 		t.Error("enable not exist uid succ")
 	}
 
-	err = manager.Disable(validHid, fakeUid+1)
+	err = manager.Disable(domain, validHid, fakeUid+1)
 	if err == nil {
 		t.Error("disable not exist uid succ")
 	}
@@ -320,19 +320,19 @@ func TestEnableMember(t *testing.T) {
 	// add members
 	for i := 0; i < 10; i++ {
 		name := fmt.Sprintf("guest%d", i)
-		err = manager.AddMember(name, validHid, int64(i+1))
+		err = manager.AddMember(domain, name, validHid, int64(i+1))
 		if err != nil {
 			t.Error("add guest failed", err)
 		}
 	}
 	// disable member
 	for i := 0; i < 10; i++ {
-		err = manager.Disable(validHid, int64(i+1))
+		err = manager.Disable(domain, validHid, int64(i+1))
 		if err != nil {
 			t.Error("disable member failed", err)
 		}
 		// check the new name
-		member, err := manager.Get(validHid, int64(i+1))
+		member, err := manager.Get(domain, validHid, int64(i+1))
 		if err != nil {
 			t.Error("get member failed", err)
 		} else if member == nil || member.GetStatus() == ACTIVE {
@@ -342,12 +342,12 @@ func TestEnableMember(t *testing.T) {
 
 	// enable member
 	for i := 0; i < 10; i++ {
-		err = manager.Enable(validHid, int64(i+1))
+		err = manager.Enable(domain, validHid, int64(i+1))
 		if err != nil {
 			t.Error("disable member failed", err)
 		}
 		// check the new name
-		member, err := manager.Get(validHid, int64(i+1))
+		member, err := manager.Get(domain, validHid, int64(i+1))
 		if err != nil {
 			t.Error("get member failed", err)
 		} else if member == nil || member.GetStatus() != ACTIVE {

@@ -6,7 +6,7 @@ import (
 )
 
 func TestImportDevice(t *testing.T) {
-	store := NewDeviceStorage(host, user, password, domain, database)
+	store := NewDeviceStorage(host, user, password, database)
 	if store == nil {
 		t.Errorf("init storage failed")
 	}
@@ -17,11 +17,11 @@ func TestImportDevice(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		id := fmt.Sprintf("20141017%d", i)
 		key := fmt.Sprintf("secret%d", i)
-		err := manager.Register(subDomain, id, key, true)
+		err := manager.Register(domain, subDomain, id, key, true)
 		if err != nil {
 			t.Error("register master device failed", err)
 		}
-		device, err := manager.Get(subDomain, id)
+		device, err := manager.Get(domain, subDomain, id)
 		if err != nil {
 			t.Error("get device failed", err)
 		} else if device == nil {
@@ -35,7 +35,7 @@ func TestImportDevice(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		id := fmt.Sprintf("20141017%d", i)
 		key := fmt.Sprintf("secret%d", i)
-		err := manager.Register(subDomain, id, key, true)
+		err := manager.Register(domain, subDomain, id, key, true)
 		if err == nil {
 			t.Error("register master device failed", err)
 		}
@@ -45,7 +45,7 @@ func TestImportDevice(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		id := fmt.Sprintf("20141017%d", i)
 		key := fmt.Sprintf("secret%d", i)
-		err := manager.Register("housing", id, key, true)
+		err := manager.Register(domain, "housing", id, key, true)
 		if err != nil {
 			t.Error("register device failed", err)
 		}
@@ -55,17 +55,17 @@ func TestImportDevice(t *testing.T) {
 		id := fmt.Sprintf("20141017%d", i)
 		key := fmt.Sprintf("secret%d", i)
 		// regist slave device
-		err := manager.Register(subDomain, id, key, false)
+		err := manager.Register(domain, subDomain, id, key, false)
 		if err == nil {
 			t.Error("register slave device failed", err)
 		}
 	}
 
-	store.Clean("device_warehouse")
+	store.Clean(domain, "device_warehouse")
 }
 
 func TestDeleteDevice(t *testing.T) {
-	store := NewDeviceStorage(host, user, password, domain, database)
+	store := NewDeviceStorage(host, user, password, database)
 	if store == nil {
 		t.Errorf("init storage failed")
 	}
@@ -76,7 +76,7 @@ func TestDeleteDevice(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		id := fmt.Sprintf("20141017%d", i)
 		key := fmt.Sprintf("secret%d", i)
-		err := manager.Register(subDomain, id, key, true)
+		err := manager.Register(domain, subDomain, id, key, true)
 		if err != nil {
 			t.Error("register master device failed", err)
 		}
@@ -85,11 +85,11 @@ func TestDeleteDevice(t *testing.T) {
 	// delete device
 	for i := 0; i < 10; i++ {
 		id := fmt.Sprintf("20141017%d", i)
-		err := manager.Delete(subDomain, id)
+		err := manager.Delete(domain, subDomain, id)
 		if err != nil {
 			t.Error("delete device failed", err)
 		}
-		device, err := manager.Get(subDomain, id)
+		device, err := manager.Get(domain, subDomain, id)
 		if err != nil {
 			t.Error("get device failed", err)
 		} else if device != nil {
@@ -100,16 +100,16 @@ func TestDeleteDevice(t *testing.T) {
 	// delete not exist device return succ
 	for i := 0; i < 10; i++ {
 		id := fmt.Sprintf("20141017%d", i)
-		err := manager.Delete(subDomain, id)
+		err := manager.Delete(domain, subDomain, id)
 		if err != nil {
 			t.Error("delete device failed", err)
 		}
 	}
-	store.Clean("device_warehouse")
+	store.Clean(domain, "device_warehouse")
 }
 
 func TestGetDevice(t *testing.T) {
-	store := NewDeviceStorage(host, user, password, domain, database)
+	store := NewDeviceStorage(host, user, password, database)
 	if store == nil {
 		t.Errorf("init storage failed")
 	}
@@ -120,11 +120,11 @@ func TestGetDevice(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		id := fmt.Sprintf("20141017%d", i)
 		key := fmt.Sprintf("secret%d", i)
-		err := manager.Register(subDomain, id, key, true)
+		err := manager.Register(domain, subDomain, id, key, true)
 		if err != nil {
 			t.Error("register master device failed", err)
 		}
-		err = manager.Register("another", id, key, false)
+		err = manager.Register(domain, "another", id, key, false)
 		if err != nil {
 			t.Error("register slave device failed", err)
 		}
@@ -133,11 +133,11 @@ func TestGetDevice(t *testing.T) {
 	// get not exist device
 	for i := 0; i < 10; i++ {
 		id := fmt.Sprintf("20151017%d", i)
-		device, err := manager.Get(subDomain, id)
+		device, err := manager.Get(domain, subDomain, id)
 		if err != nil || device != nil {
 			t.Error("get device failed", err)
 		}
-		device, err = manager.Get("another", id)
+		device, err = manager.Get(domain, "another", id)
 		if err != nil || device != nil {
 			t.Error("get device failed")
 		}
@@ -147,7 +147,7 @@ func TestGetDevice(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		id := fmt.Sprintf("20141017%d", i)
 		key := fmt.Sprintf("secret%d", i)
-		device, err := manager.Get(subDomain, id)
+		device, err := manager.Get(domain, subDomain, id)
 		if err != nil || device == nil {
 			t.Error("get device failed", err)
 		} else if !device.Validate() {
@@ -157,7 +157,7 @@ func TestGetDevice(t *testing.T) {
 			t.Error("device info error")
 		}
 		// another subdomain
-		device, err = manager.Get("another", id)
+		device, err = manager.Get(domain, "another", id)
 		if err != nil || device == nil {
 			t.Error("get device failed")
 		} else if !device.Validate() {
@@ -168,5 +168,5 @@ func TestGetDevice(t *testing.T) {
 			t.Error("device info error")
 		}
 	}
-	store.Clean("device_warehouse")
+	store.Clean(domain, "device_warehouse")
 }

@@ -53,9 +53,14 @@ type DeviceInfo struct {
 	masterDid  int64
 }
 
-// device global id
+// device inner id
 func (this *DeviceInfo) GetDid() int64 {
 	return this.did
+}
+
+// device home id
+func (this *DeviceInfo) GetHid() int64 {
+	return this.hid
 }
 
 // device name for device user

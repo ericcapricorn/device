@@ -6,7 +6,7 @@ import (
 )
 
 func TestCreatemanager(t *testing.T) {
-	store := NewDeviceStorage(host, user, password, domain, database)
+	store := NewDeviceStorage(host, user, password, database)
 	if store == nil {
 		t.Errorf("init storage failed")
 	}
@@ -15,7 +15,7 @@ func TestCreatemanager(t *testing.T) {
 	// create a manager for one user
 	for i := 0; i < 10; i++ {
 		name := fmt.Sprintf("home%d", i)
-		err := manager.Create(int64(i+1), name)
+		err := manager.Create(domain, int64(i+1), name)
 		if err != nil {
 			t.Errorf("create home failed:name[%s], err[%v]", name, err)
 		}
@@ -23,21 +23,21 @@ func TestCreatemanager(t *testing.T) {
 	// create by one user uid = 1
 	for i := 0; i < 10; i++ {
 		name := fmt.Sprintf("home%d", i)
-		err := manager.Create(1, name)
+		err := manager.Create(domain, 1, name)
 		if err != nil {
 			t.Errorf("create home failed:uid[%d], name[%s], err[%v]", 1, name, err)
 		}
 	}
 
 	// check home count of user 1
-	list, err := manager.GetAllHome(1)
+	list, err := manager.GetAllHome(domain, 1)
 	if err != nil || len(list) != 11 {
 		t.Errorf("get user all home failed:err[%v]", err)
 	}
 
 	// get home info
 	for _, home := range list {
-		temp, err := manager.Get(home.GetHid())
+		temp, err := manager.Get(domain, home.GetHid())
 		if err != nil {
 			t.Errorf("get home failed:hid[%d], err[%v]", home.GetHid(), err)
 		}
@@ -46,12 +46,12 @@ func TestCreatemanager(t *testing.T) {
 			t.Errorf("check home info not right")
 		}
 	}
-	store.Clean("home_info")
-	store.Clean("home_members")
+	store.Clean(domain, "home_info")
+	store.Clean(domain, "home_members")
 }
 
 func TestDeletemanager(t *testing.T) {
-	store := NewDeviceStorage(host, user, password, domain, database)
+	store := NewDeviceStorage(host, user, password, database)
 	if store == nil {
 		t.Errorf("init storage failed")
 	}
@@ -61,42 +61,42 @@ func TestDeletemanager(t *testing.T) {
 	var uid int64 = 1
 	for i := 0; i < 10; i++ {
 		name := fmt.Sprintf("home%d", i)
-		err := manager.Create(uid, name)
+		err := manager.Create(domain, uid, name)
 		if err != nil {
 			t.Errorf("create home failed:name[%s], err[%v]", name, err)
 		}
 	}
 	// get the user all manager info
-	list, err := manager.GetAllHome(uid)
+	list, err := manager.GetAllHome(domain, uid)
 	if err != nil || len(list) != 10 {
 		t.Errorf("get user all home failed:err[%v]", err)
 	}
 
 	// delete all managers
 	for _, home := range list {
-		err = manager.Delete(home.hid)
+		err = manager.Delete(domain, home.hid)
 		if err != nil {
 			t.Errorf("delete home failed:hid[%d], err[%v]", home.hid, err)
 		}
 
 		// delete not exist return nil
-		err = manager.Delete(home.hid)
+		err = manager.Delete(domain, home.hid)
 		if err != nil {
 			t.Errorf("delete not exist home failed:hid[%d], err[%v]", home.hid, err)
 		}
 	}
 	// get the user all manager info
-	list, err = manager.GetAllHome(uid)
+	list, err = manager.GetAllHome(domain, uid)
 	if err != nil || len(list) != 0 {
 		t.Errorf("get user all home failed:err[%v]", err)
 	}
-	store.Clean("home_info")
-	store.Clean("home_members")
-	store.Clean("device_info")
+	store.Clean(domain, "home_info")
+	store.Clean(domain, "home_members")
+	store.Clean(domain, "device_info")
 }
 
 func TestDisable(t *testing.T) {
-	store := NewDeviceStorage(host, user, password, domain, database)
+	store := NewDeviceStorage(host, user, password, database)
 	if store == nil {
 		t.Errorf("init storage failed")
 	}
@@ -106,28 +106,28 @@ func TestDisable(t *testing.T) {
 	var uid int64 = 1
 	for i := 0; i < 10; i++ {
 		name := fmt.Sprintf("home%d", i)
-		err := manager.Create(uid, name)
+		err := manager.Create(domain, uid, name)
 		if err != nil {
 			t.Errorf("create home failed:name[%s], err[%v]", name, err)
 		}
 	}
 	// get the user all manager info
-	list, err := manager.GetAllHome(uid)
+	list, err := manager.GetAllHome(domain, uid)
 	if err != nil || len(list) != 10 {
 		t.Errorf("get user all home failed:err[%v]", err)
 	}
 	// disable enable modify name
 	for _, home := range list {
-		err = manager.Disable(home.hid)
+		err = manager.Disable(domain, home.hid)
 		if err != nil {
 			t.Errorf("disable home failed:hid[%d], err[%v]", home.hid, err)
 		}
 		name := fmt.Sprintf("Myhome%d", home.hid)
-		err = manager.ModifyName(home.hid, name)
+		err = manager.ModifyName(domain, home.hid, name)
 		if err == nil {
 			t.Errorf("modify disable home succ:hid[%d]", home.hid)
 		}
-		temp, err := manager.Get(home.hid)
+		temp, err := manager.Get(domain, home.hid)
 		if err != nil {
 			t.Errorf("get home failed:hid[%d], err[%v]", home.hid, err)
 		} else if temp.GetName() == name {
@@ -136,22 +136,22 @@ func TestDisable(t *testing.T) {
 	}
 
 	for _, home := range list {
-		err = manager.Enable(home.hid)
+		err = manager.Enable(domain, home.hid)
 		if err != nil {
 			t.Errorf("enable home failed:hid[%d], err[%v]", home.hid, err)
 		}
 		name := fmt.Sprintf("Myhome%d", home.hid)
-		err = manager.ModifyName(home.hid, name)
+		err = manager.ModifyName(domain, home.hid, name)
 		if err != nil {
 			t.Errorf("modify home name succ:hid[%d]", home.hid)
 		}
-		temp, err := manager.Get(home.hid)
+		temp, err := manager.Get(domain, home.hid)
 		if err != nil {
 			t.Errorf("get home failed:hid[%d], err[%v]", home.hid, err)
 		} else if temp.GetName() != name {
 			t.Errorf("home name not modified:hid[%d]", home.hid)
 		}
 	}
-	store.Clean("home_info")
-	store.Clean("home_members")
+	store.Clean(domain, "home_info")
+	store.Clean(domain, "home_members")
 }
