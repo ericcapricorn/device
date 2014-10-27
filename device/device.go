@@ -10,6 +10,13 @@ const (
 	MASTER = 1
 )
 
+// device key
+type DeviceKey struct {
+	domain    string
+	subDomain string
+	deviceId  string
+}
+
 // device key(subdomain + deviceid)
 type BasicInfo struct {
 	subDomain  string
@@ -17,6 +24,10 @@ type BasicInfo struct {
 	publicKey  sql.NullString
 	deviceType int
 	status     int8
+}
+
+func NewBasicInfo() *BasicInfo {
+	return &BasicInfo{}
 }
 
 func (this *BasicInfo) Validate() bool {

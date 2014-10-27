@@ -181,6 +181,7 @@ func (this *MemberManager) getMemberInfo(domain string, hid, uid int64, member *
 	return nil
 }
 
+// get all homes created by uid or uid as a member
 func (this *MemberManager) getMemberAllHomes(domain string, uid int64) ([]int64, error) {
 	SQL := fmt.Sprintf("SELECT hid FROM %s_home_members WHERE uid = ?", domain)
 	stmt, err := this.store.db.Prepare(SQL)

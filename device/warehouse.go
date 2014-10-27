@@ -1,54 +1,25 @@
 package device
 
 import (
-	"database/sql"
-	"fmt"
 	"zc-common-go/common"
 	log "zc-common-go/glog"
-	_ "zc-common-go/mysql"
 )
 
 type DeviceWarehouse struct {
-	store *DeviceStorage
+	db *warehouseProxy
 }
 
 func NewDeviceWarehouse(store *DeviceStorage) *DeviceWarehouse {
-	return &DeviceWarehouse{store: store}
+	db := newWarehouseProxy(store)
+	if db == nil {
+		log.Error("new WarehouseProxy failed")
+		return nil
+	}
+	return &DeviceWarehouse{db: db}
 }
 
-//////////////////////////////////////////////////////////////////////////////
-/// public interface
-//////////////////////////////////////////////////////////////////////////////
-// if find the record return basic info + nil
-func (this *DeviceWarehouse) Get(domain, subDomain, deviceId string) (*BasicInfo, error) {
-	var device BasicInfo
-	err := this.getDeviceinfo(domain, subDomain, deviceId, &device)
-	if err != nil {
-		if err == common.ErrEntryNotExist {
-			return nil, nil
-		} else {
-			log.Warningf("get device info failed:domain[%s], device[%s:%s]", domain, subDomain, deviceId)
-			return nil, err
-		}
-	}
-	if device.Validate() {
-		return &device, nil
-	} else {
-		log.Errorf("check device info failed:domain[%s], device[%s:%s]", domain, subDomain, deviceId)
-		return nil, common.ErrInvalidDevice
-	}
-	return &device, nil
-}
-
-// WARNING: must be cautious for using this interface
-// delete the device only for not online device
-func (this *DeviceWarehouse) Delete(domain, subDomain, deviceId string) error {
-	err := this.deleteDeviceInfo(domain, subDomain, deviceId)
-	if err != nil {
-		log.Warningf("delete the device failed:domain[%s], device[%s:%s]", domain, subDomain, deviceId)
-		return err
-	}
-	return nil
+func (this *DeviceWarehouse) Clear() {
+	this.db.Clear()
 }
 
 // import a new device
@@ -60,7 +31,7 @@ func (this *DeviceWarehouse) Register(domain, subDomain, deviceId, publicKey str
 		log.Warningf("check public key length failed:domain[%s], device[%s:%s]", domain, subDomain, deviceId)
 		return common.ErrInvalidParam
 	}
-	err := this.insertDeviceInfo(domain, subDomain, deviceId, publicKey, master)
+	err := this.db.InsertDeviceInfo(domain, subDomain, deviceId, publicKey, master)
 	if err != nil {
 		log.Warningf("insert device info failed:domain[%s], device[%s:%s], master[%t]",
 			domain, subDomain, deviceId, master)
@@ -69,66 +40,31 @@ func (this *DeviceWarehouse) Register(domain, subDomain, deviceId, publicKey str
 	return nil
 }
 
-//////////////////////////////////////////////////////////////////////////////
-// database related private interface
-//////////////////////////////////////////////////////////////////////////////
-func (this *DeviceWarehouse) getDeviceinfo(domain, subDomain, deviceId string, basic *BasicInfo) error {
-	SQL := fmt.Sprintf("SELECT sub_domain, device_id, device_type, public_key, status FROM %s_device_warehouse WHERE sub_domain = ? AND device_id = ?", domain)
-	stmt, err := this.store.db.Prepare(SQL)
+// if find the record return basic info + nil, if not exist, return nil + nil
+func (this *DeviceWarehouse) Get(domain, subDomain, deviceId string) (*BasicInfo, error) {
+	device, err := this.db.GetDeviceInfo(domain, subDomain, deviceId)
 	if err != nil {
-		log.Errorf("prepare query failed:err[%v]", err)
-		return err
+		log.Warningf("get device info failed:domain[%s], device[%s:%s]", domain, subDomain, deviceId)
+		return nil, err
+	} else if device == nil {
+		log.Warningf("not find the device info:domain[%s], device[%s:%s]", domain, subDomain, deviceId)
+		return nil, nil
 	}
-	defer stmt.Close()
-	err = stmt.QueryRow(subDomain, deviceId).Scan(&basic.subDomain, &basic.deviceId, &basic.deviceType, &basic.publicKey, &basic.status)
-	if err != nil {
-		if err != sql.ErrNoRows {
-			log.Errorf("query failed:domain[%s], device[%s:%s]", domain, subDomain, deviceId)
-			return err
-		} else {
-			return common.ErrEntryNotExist
-		}
+	if device.Validate() {
+		return device, nil
+	} else {
+		log.Errorf("validate device info failed:domain[%s], device[%s:%s]", domain, subDomain, deviceId)
+		return nil, common.ErrInvalidDevice
 	}
-	return nil
+	return device, nil
 }
 
-func (this *DeviceWarehouse) insertDeviceInfo(domain, subDomain, deviceId, publicKey string, master bool) error {
-	var SQL string
-	if master {
-		SQL = fmt.Sprintf("INSERT INTO %s_device_warehouse(sub_domain, device_id, device_type, public_key, status) VALUES(?,?,?,?,?)", domain)
-	} else {
-		SQL = fmt.Sprintf("INSERT INTO %s_device_warehouse(sub_domain, device_id, device_type, status) VALUES(?,?,?,?)", domain)
-	}
-	stmt, err := this.store.db.Prepare(SQL)
+// WARNING: must be cautious for using this interface
+// delete the device only for not online device
+func (this *DeviceWarehouse) Delete(domain, subDomain, deviceId string) error {
+	err := this.db.DeleteDeviceInfo(domain, subDomain, deviceId)
 	if err != nil {
-		log.Errorf("prepare query failed:err[%v]", err)
-		return err
-	}
-	defer stmt.Close()
-	if master {
-		_, err = stmt.Exec(subDomain, deviceId, MASTER, publicKey, ACTIVE)
-	} else {
-		_, err = stmt.Exec(subDomain, deviceId, NORMAL, ACTIVE)
-	}
-	if err != nil {
-		log.Warningf("execute insert device[%s:%s] failed:domain[%s], err[%v]", subDomain, deviceId, domain, err)
-		return err
-	}
-	return nil
-}
-
-func (this *DeviceWarehouse) deleteDeviceInfo(domain, subDomain, deviceId string) error {
-	SQL := fmt.Sprintf("DELETE FROM %s_device_warehouse WHERE sub_domain = ? AND device_id = ?", domain)
-	stmt, err := this.store.db.Prepare(SQL)
-	if err != nil {
-		log.Errorf("prepare query failed:err[%v]", err)
-		return err
-	}
-	defer stmt.Close()
-	_, err = stmt.Exec(subDomain, deviceId)
-	if err != nil {
-		log.Errorf("delete the device failed:domain[%s], subDomain[%s], deviceId[%s], err[%s]",
-			domain, subDomain, deviceId, err)
+		log.Warningf("delete the device failed:domain[%s], device[%s:%s]", domain, subDomain, deviceId)
 		return err
 	}
 	return nil
