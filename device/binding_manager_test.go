@@ -76,9 +76,8 @@ func TestBinding(t *testing.T) {
 		if err != nil {
 			t.Errorf("binding master device failed:err[%v]", err)
 		}
-		var bind BindingInfo
-		err = binding.getBindingInfo(domain, subDomain, id, &bind)
-		if err != nil {
+		bind, err := binding.GetBindingInfo(domain, subDomain, id)
+		if err != nil || bind == nil {
 			t.Errorf("get binding info failed:err[%v]", err)
 		} else {
 			master = append(master, bind.did)
@@ -88,9 +87,8 @@ func TestBinding(t *testing.T) {
 		if err != nil {
 			t.Errorf("rebinding master device failed:err[%v]", err)
 		}
-		var bind2 BindingInfo
-		err = binding.getBindingInfo(domain, subDomain, id, &bind2)
-		if err != nil || bind2.did != bind.did {
+		bind2, err := binding.GetBindingInfo(domain, subDomain, id)
+		if err != nil || bind2 == nil || bind2.did != bind.did {
 			t.Errorf("get binding info failed:err[%v]", err)
 		}
 	}
@@ -119,9 +117,8 @@ func TestBinding(t *testing.T) {
 		if err != nil {
 			t.Errorf("binding master device failed:err[%v]", err)
 		}
-		var bind BindingInfo
-		err = binding.getBindingInfo(domain, subDomain, id, &bind)
-		if err != nil {
+		bind, err := binding.GetBindingInfo(domain, subDomain, id)
+		if err != nil || bind == nil {
 			t.Errorf("get binding info failed:err[%v]", err)
 		}
 		// bind again
@@ -129,9 +126,8 @@ func TestBinding(t *testing.T) {
 		if err != nil {
 			t.Errorf("binding master device failed:err[%v]", err)
 		}
-		var bind2 BindingInfo
-		err = binding.getBindingInfo(domain, subDomain, id, &bind2)
-		if err != nil || bind2.did != bind.did {
+		bind2, err := binding.GetBindingInfo(domain, subDomain, id)
+		if err != nil || bind2 == nil || bind2.did != bind.did {
 			t.Errorf("get binding info failed:err[%v]", err)
 		}
 	}
@@ -192,9 +188,8 @@ func TestChangeBinding(t *testing.T) {
 		if err != nil {
 			t.Errorf("binding master device failed:err[%v]", err)
 		}
-		var bind BindingInfo
-		err = binding.getBindingInfo(domain, subDomain, id, &bind)
-		if err != nil {
+		bind, err := binding.GetBindingInfo(domain, subDomain, id)
+		if err != nil || bind == nil {
 			t.Errorf("get binding info failed:err[%v]", err)
 		} else {
 			master = append(master, bind.did)
@@ -204,9 +199,8 @@ func TestChangeBinding(t *testing.T) {
 		if err != nil {
 			t.Errorf("rebinding master device failed:err[%v]", err)
 		}
-		var bind2 BindingInfo
-		err = binding.getBindingInfo(domain, subDomain, id, &bind2)
-		if err != nil || bind2.did != bind.did {
+		bind2, err := binding.GetBindingInfo(domain, subDomain, id)
+		if err != nil || bind2 == nil || bind2.did != bind.did {
 			t.Errorf("get binding info failed:err[%v]", err)
 		}
 	}
@@ -233,9 +227,8 @@ func TestChangeBinding(t *testing.T) {
 		if err != nil {
 			t.Errorf("change binding failed:err[%v]", err)
 		}
-		var bind BindingInfo
-		err = binding.getBindingInfo(domain, subDomain, id, &bind)
-		if err != nil {
+		bind, err := binding.GetBindingInfo(domain, subDomain, id)
+		if err != nil || bind == nil {
 			t.Errorf("get binding info failed:err[%v]", err)
 		} else if bind.did != master[i] {
 			t.Errorf("check binding info error:old[%d], new[%d]", master[i], bind.did)

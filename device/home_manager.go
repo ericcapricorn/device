@@ -100,7 +100,6 @@ func (this *HomeManager) GetAllHome(domain string, uid int64) ([]Home, error) {
 			log.Warningf("get home info failed:domain[%s], uid[%d], hid[%d]", domain, uid, hid)
 			return nil, err
 		} else if home == nil {
-			// maybe deleted
 			log.Warningf("check home not exist:domain[%s], uid[%d], hid[%d]", domain, uid, hid)
 		} else {
 			list = append(list, *home)

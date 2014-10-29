@@ -10,13 +10,6 @@ const (
 	MASTER = 1
 )
 
-// device key
-type DeviceKey struct {
-	domain    string
-	subDomain string
-	deviceId  string
-}
-
 // device key(subdomain + deviceid)
 type BasicInfo struct {
 	subDomain  string
@@ -26,8 +19,17 @@ type BasicInfo struct {
 	status     int8
 }
 
+// invalid basic info
 func NewBasicInfo() *BasicInfo {
-	return &BasicInfo{}
+	return &BasicInfo{status: INVALID}
+}
+
+func (this *BasicInfo) PublicKey() string {
+	return this.publicKey.String
+}
+
+func (this *BasicInfo) IsMaster() bool {
+	return this.deviceType == MASTER
 }
 
 func (this *BasicInfo) Validate() bool {
@@ -55,6 +57,11 @@ type BindingInfo struct {
 	grantTime  mysql.NullTime
 }
 
+// invalid default binding info
+func NewBindingInfo() *BindingInfo {
+	return &BindingInfo{did: -1}
+}
+
 // if masterDid = did, it is master device, else it's normal device
 type DeviceInfo struct {
 	did        int64
@@ -62,6 +69,11 @@ type DeviceInfo struct {
 	deviceName string
 	status     int8
 	masterDid  int64
+}
+
+// default invalid device info
+func NewDeviceInfo() *DeviceInfo {
+	return &DeviceInfo{did: -1}
 }
 
 // device inner id

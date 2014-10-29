@@ -45,13 +45,13 @@ func TestAddMember(t *testing.T) {
 	}
 	// home not exist
 	for i := 0; i < 10; i++ {
-		err = manager.AddMember(domain, "guest", fakeHid, fakeUid)
+		err = manager.AddMember(domain, fakeHid, fakeUid, "guest")
 		if err == nil {
 			t.Error("add guest failed", err)
 		}
 	}
 	for i := 0; i < 10; i++ {
-		err = manager.AddMember(domain, "guest", fakeHid, int64(i+1))
+		err = manager.AddMember(domain, fakeHid, int64(i+1), "guest")
 		if err == nil {
 			t.Error("add guest failed", err)
 		}
@@ -64,13 +64,13 @@ func TestAddMember(t *testing.T) {
 	}
 
 	// valid home id add owner as member return succ
-	err = manager.AddMember(domain, "guest", validHid, fakeUid)
+	err = manager.AddMember(domain, validHid, fakeUid, "guest")
 	if err != nil {
 		t.Error("add owner oneself failed", err)
 	}
 
 	for i := 0; i < 10; i++ {
-		err = manager.AddMember(domain, "guest", validHid, int64(i+1))
+		err = manager.AddMember(domain, validHid, int64(i+1), "guest")
 		if err != nil {
 			t.Error("add guest failed", err)
 		}
@@ -96,7 +96,7 @@ func TestDeleteMember(t *testing.T) {
 	}
 	// add member to the valid hid
 	for i := 0; i < 10; i++ {
-		err = manager.AddMember(domain, "guest", validHid, int64(i+1))
+		err = manager.AddMember(domain, validHid, int64(i+1), "guest")
 		if err != nil {
 			t.Error("add guest failed", err)
 		}
@@ -130,7 +130,7 @@ func TestGetMemberInfo(t *testing.T) {
 	var member *Member
 	for i := 0; i < 10; i++ {
 		name := fmt.Sprintf("guest%d", i)
-		err = manager.AddMember(domain, name, validHid, int64(i+1))
+		err = manager.AddMember(domain, validHid, int64(i+1), name)
 		if err != nil {
 			t.Error("add guest failed", err)
 		}
@@ -206,7 +206,7 @@ func TestAllMember(t *testing.T) {
 	// add member
 	for i := 0; i < 10; i++ {
 		name := fmt.Sprintf("guest%d", i)
-		err = manager.AddMember(domain, name, validHid, int64(i+1))
+		err = manager.AddMember(domain, validHid, int64(i+1), name)
 		if err != nil {
 			t.Error("add guest failed", err)
 		}
@@ -262,7 +262,7 @@ func TestModifyMemberName(t *testing.T) {
 	// modify member name
 	for i := 0; i < 10; i++ {
 		name := fmt.Sprintf("guest%d", i)
-		err = manager.AddMember(domain, name, validHid, int64(i+1))
+		err = manager.AddMember(domain, validHid, int64(i+1), name)
 		if err != nil {
 			t.Error("add guest failed", err)
 		}
@@ -320,7 +320,7 @@ func TestEnableMember(t *testing.T) {
 	// add members
 	for i := 0; i < 10; i++ {
 		name := fmt.Sprintf("guest%d", i)
-		err = manager.AddMember(domain, name, validHid, int64(i+1))
+		err = manager.AddMember(domain, validHid, int64(i+1), name)
 		if err != nil {
 			t.Error("add guest failed", err)
 		}

@@ -19,8 +19,7 @@ func NewMemberManager(store *DeviceStorage) *MemberManager {
 ////////////////////////////////////////////////////////////////////////////////////
 // public interface
 ////////////////////////////////////////////////////////////////////////////////////
-
-// get member for check if the user has privelige
+// get member for check if the user has privelige, if not exist return nil + nil
 func (this *MemberManager) Get(domain string, hid, uid int64) (*Member, error) {
 	common.CheckParam(this.store != nil)
 	var member Member
@@ -60,7 +59,7 @@ func (this *MemberManager) AddOwner(domain, owner string, hid, uid int64) error 
 }
 
 // add home normal member
-func (this *MemberManager) AddMember(domain, member string, hid, uid int64) error {
+func (this *MemberManager) AddMember(domain string, hid, uid int64, member string) error {
 	common.CheckParam(this.store != nil)
 	if len(member) <= 0 {
 		log.Warningf("check member name failed:domain[%s], member[%s], uid[%d], hid[%d]",

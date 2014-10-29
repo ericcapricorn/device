@@ -52,8 +52,7 @@ func prepare(store *DeviceStorage) {
 		if err != nil {
 			panic("binding master device failed")
 		}
-		var bind BindingInfo
-		err = binding.getBindingInfo(domain, subDomain, id, &bind)
+		bind, err := binding.GetBindingInfo(domain, subDomain, id)
 		if err != nil {
 			panic("get binding info failed")
 		} else {
@@ -247,21 +246,31 @@ func TestChangeDeviceInfo(t *testing.T) {
 		for _, dev := range devList {
 			if !dev.IsMasterDevice() {
 				name := fmt.Sprintf("slave%dmaster%d", dev.GetDid(), dev.GetMasterDid())
-				err = device.ChangeDeviceInfo(domain, dev.GetDid(), "name", name)
+				err = device.ChangeDeviceName(domain, dev.GetDid(), name)
 				if err != nil {
 					t.Error("change device info failed", dev.GetDid(), err)
 				}
 			} else {
 				// be frozen
-				err = device.ChangeDeviceStatus(domain, dev.GetDid(), FROZEN)
+				err = device.Disable(domain, dev.GetDid())
 				if err != nil {
-					t.Error("change device status failed", dev.GetDid(), err)
+					t.Error("disable device status failed", dev.GetDid(), err)
 				}
 				// can not change the device name
 				name := fmt.Sprintf("newmastername%d", dev.GetDid())
-				err = device.ChangeDeviceInfo(domain, dev.GetDid(), "name", name)
+				err = device.ChangeDeviceName(domain, dev.GetDid(), name)
 				if err == nil {
 					t.Error("change frozen device info succ", dev.GetDid(), err)
+				}
+
+				// be defrozen
+				err = device.Enable(domain, dev.GetDid())
+				if err != nil {
+					t.Error("disable device status failed", dev.GetDid(), err)
+				}
+				err = device.ChangeDeviceName(domain, dev.GetDid(), name)
+				if err != nil {
+					t.Error("change normal device info failed", dev.GetDid(), err)
 				}
 			}
 		}
@@ -291,7 +300,7 @@ func TestChangeDeviceInfo(t *testing.T) {
 	}
 	// invalid did
 	var invalidDid int64 = 10000000
-	err = device.ChangeDeviceInfo(domain, invalidDid, "master_did", invalidDid)
+	err = device.ChangeDeviceName(domain, invalidDid, "xxxx")
 	if err == nil {
 		t.Error("change not exist device succ", invalidDid, err)
 	}

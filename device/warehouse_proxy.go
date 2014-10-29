@@ -3,58 +3,55 @@ package device
 import (
 	"database/sql"
 	"fmt"
-	"zc-common-go/common"
 	log "zc-common-go/glog"
 )
 
-type warehouseProxy struct {
+type WarehouseProxy struct {
 	cacheOn bool
-	cache   *common.LRUCache
+	cache   *WarehouseCache
 	store   *DeviceStorage
 }
 
 const MAX_DEVICE_COUNT int64 = 100000
 
-func newWarehouseProxy(store *DeviceStorage) *warehouseProxy {
-	cache := common.NewLRUCache(MAX_DEVICE_COUNT)
+func newWarehouseProxy(store *DeviceStorage) *WarehouseProxy {
+	cache := newWarehouseCache(MAX_DEVICE_COUNT)
 	if cache == nil {
-		log.Error("new Account Cache failed")
+		log.Error("new device warehouse Cache failed")
 		return nil
 	}
-	return &warehouseProxy{cacheOn: true, cache: cache, store: store}
+	return &WarehouseProxy{cacheOn: true, cache: cache, store: store}
 }
 
 // switch the cache on/off
-func (this *warehouseProxy) SwitchCache(on bool) {
+func (this *WarehouseProxy) SwitchCache(on bool) {
 	this.cacheOn = on
-	this.Clear()
+	this.cache.Clear()
 }
 
 // clear the cache
-func (this *warehouseProxy) Clear() {
-	log.Infof("clear the cache:len[%d], hit_ratio[%f]", this.cache.Len(), this.cache.HitRatio())
+func (this *WarehouseProxy) Clear() {
 	this.cache.Clear()
 }
 
 // if not find in database return nil + nil
-func (this *warehouseProxy) GetDeviceInfo(domain, subDomain, deviceId string) (*BasicInfo, error) {
+func (this *WarehouseProxy) GetDeviceInfo(domain, subDomain, deviceId string) (*BasicInfo, error) {
 	if this.cacheOn {
-		basic, find := this.cache.Get(DeviceKey{domain: domain, subDomain: subDomain, deviceId: deviceId})
+		basic, find := this.cache.Get(domain, subDomain, deviceId)
 		if find {
 			log.Infof("get device basic info from cache:domain[%s], device[%s:%s]", domain, subDomain, deviceId)
-			return basic.(*BasicInfo), nil
+			return basic, nil
 		}
 	}
-	SQL := fmt.Sprintf("SELECT sub_domain, device_id, device_type, public_key, status FROM %s_device_warehouse WHERE sub_domain = ? AND device_id = ?", domain)
+	SQL := fmt.Sprintf("SELECT device_type, public_key, status FROM %s_device_warehouse WHERE sub_domain = ? AND device_id = ?", domain)
 	stmt, err := this.store.db.Prepare(SQL)
 	if err != nil {
 		log.Errorf("prepare query failed:err[%v]", err)
 		return nil, err
 	}
 	defer stmt.Close()
-	//
 	basic := NewBasicInfo()
-	err = stmt.QueryRow(subDomain, deviceId).Scan(&basic.subDomain, &basic.deviceId, &basic.deviceType, &basic.publicKey, &basic.status)
+	err = stmt.QueryRow(subDomain, deviceId).Scan(&basic.deviceType, &basic.publicKey, &basic.status)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			log.Warningf("no find the device:domain[%s], device[%s:%s]", domain, subDomain, deviceId)
@@ -63,13 +60,15 @@ func (this *warehouseProxy) GetDeviceInfo(domain, subDomain, deviceId string) (*
 		log.Errorf("query failed:domain[%s], device[%s:%s]", domain, subDomain, deviceId)
 		return nil, err
 	}
+	basic.subDomain = subDomain
+	basic.deviceId = deviceId
 	if this.cacheOn {
-		this.cache.Set(DeviceKey{domain: domain, subDomain: subDomain, deviceId: deviceId}, basic)
+		this.cache.Set(domain, basic)
 	}
 	return basic, nil
 }
 
-func (this *warehouseProxy) InsertDeviceInfo(domain, subDomain, deviceId, publicKey string, master bool) error {
+func (this *WarehouseProxy) InsertDeviceInfo(domain, subDomain, deviceId, publicKey string, master bool) error {
 	var SQL string
 	if master {
 		SQL = fmt.Sprintf("INSERT INTO %s_device_warehouse(sub_domain, device_id, device_type, public_key, status) VALUES(?,?,?,?,?)", domain)
@@ -92,14 +91,14 @@ func (this *warehouseProxy) InsertDeviceInfo(domain, subDomain, deviceId, public
 		return err
 	}
 	if this.cacheOn {
-		this.cache.Delete(DeviceKey{domain: domain, subDomain: subDomain, deviceId: deviceId})
+		this.cache.Delete(domain, subDomain, deviceId)
 	}
 	return nil
 }
 
-func (this *warehouseProxy) DeleteDeviceInfo(domain, subDomain, deviceId string) error {
+func (this *WarehouseProxy) DeleteDeviceInfo(domain, subDomain, deviceId string) error {
 	if this.cacheOn {
-		this.cache.Delete(DeviceKey{domain: domain, subDomain: subDomain, deviceId: deviceId})
+		this.cache.Delete(domain, subDomain, deviceId)
 	}
 	SQL := fmt.Sprintf("DELETE FROM %s_device_warehouse WHERE sub_domain = ? AND device_id = ?", domain)
 	stmt, err := this.store.db.Prepare(SQL)

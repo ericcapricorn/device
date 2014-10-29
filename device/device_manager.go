@@ -48,14 +48,17 @@ func (this *DeviceManager) DeleteAllDevices(domain string, hid int64) error {
 	return this.deleteAllDevices(domain, hid)
 }
 
-// no matter the device status
-func (this *DeviceManager) ChangeDeviceStatus(domain string, did int64, status int8) error {
-	return this.modifyDeviceInfo(false, domain, did, "status", status)
+// only change device name
+func (this *DeviceManager) ChangeDeviceName(domain string, did int64, name string) error {
+	return this.modifyDeviceInfo(true, domain, did, "name", name)
 }
 
-// TODO the primary key info and status should not changed by this interface
-func (this *DeviceManager) ChangeDeviceInfo(domain string, did int64, key string, value interface{}) error {
-	return this.modifyDeviceInfo(true, domain, did, key, value)
+func (this *DeviceManager) Disable(domain string, did int64) error {
+	return this.modifyDeviceInfo(false, domain, did, "status", FROZEN)
+}
+
+func (this *DeviceManager) Enable(domain string, did int64) error {
+	return this.modifyDeviceInfo(false, domain, did, "status", ACTIVE)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////

@@ -6,20 +6,31 @@ import (
 )
 
 type AccessRouter struct {
-	store *DeviceStorage
+	deviceManager *DeviceManager
+	bindManager   *BindingManager
+	homeManager   *HomeManager
+	memberManager *MemberManager
 }
 
 func NewAccessRouter(store *DeviceStorage) *AccessRouter {
-	return &AccessRouter{store: store}
+	return &AccessRouter{deviceManager: NewDeviceManager(store), bindManager: NewBindingManager(store),
+		homeManager: NewHomeManager(store), memberManager: NewMemberManager(store)}
+}
+
+func (this *AccessRouter) Validate() bool {
+	return this.deviceManager != nil && this.bindManager != nil && this.homeManager != nil && this.memberManager != nil
 }
 
 // give device inner id get the master device info(did)
 func (this *AccessRouter) GetAccessPoint(uid int64, domain string, did int64) (string, string, error) {
+	var invalidString string
+	if !this.Validate() {
+		log.Error("check access router internal member failed")
+		return invalidString, invalidString, common.ErrUnknown
+	}
 	// step 0. TODO check the mapping is valid
 	// step 1. get the device info check it is master or normal device
-	var invalidString string
-	deviceManager := NewDeviceManager(this.store)
-	device, err := deviceManager.Get(domain, did)
+	device, err := this.deviceManager.Get(domain, did)
 	if err != nil {
 		log.Warningf("get device info failed:domain[%s], did[%d], err[%v]", domain, did, err)
 		return invalidString, invalidString, err
@@ -39,20 +50,9 @@ func (this *AccessRouter) GetAccessPoint(uid int64, domain string, did int64) (s
 		return invalidString, invalidString, common.ErrUnknown
 	}
 
-	// step 2. get master device subdomain + deviceid
-	bindManager := NewBindingManager(this.store)
-	bind, err := bindManager.Get(domain, masterDid)
-	if err != nil {
-		log.Warningf("get master mapping binding info failed:domain[%s], did[%d], err[%v]", domain, masterDid, err)
-		return invalidString, invalidString, err
-	} else if bind == nil {
-		log.Warningf("master device mapping not exist:domain[%s], did[%d]", domain, masterDid)
-		return invalidString, invalidString, err
-	}
-
-	// step 3. check the master status
+	// step 2. check the master status
 	if !device.IsMasterDevice() {
-		master, err := deviceManager.Get(domain, masterDid)
+		master, err := this.deviceManager.Get(domain, masterDid)
 		if err != nil {
 			log.Warningf("get master device info failed:domain[%s], did[%d], err[%v]", domain, masterDid, err)
 			return invalidString, invalidString, err
@@ -65,9 +65,18 @@ func (this *AccessRouter) GetAccessPoint(uid int64, domain string, did int64) (s
 		}
 	}
 
+	// step 3. get master device subdomain + deviceid
+	bind, err := this.bindManager.Get(domain, masterDid)
+	if err != nil {
+		log.Warningf("get master mapping binding info failed:domain[%s], did[%d], err[%v]", domain, masterDid, err)
+		return invalidString, invalidString, err
+	} else if bind == nil {
+		log.Warningf("master device mapping not exist:domain[%s], did[%d]", domain, masterDid)
+		return invalidString, invalidString, err
+	}
+
 	// step 4. check the home status ok
-	homeManager := NewHomeManager(this.store)
-	home, err := homeManager.Get(domain, hid)
+	home, err := this.homeManager.Get(domain, hid)
 	if err != nil {
 		log.Warningf("get home info failed:domain[%s], hid[%d], uid[%d], err[%v]", domain, hid, uid, err)
 		return invalidString, invalidString, err
@@ -80,8 +89,7 @@ func (this *AccessRouter) GetAccessPoint(uid int64, domain string, did int64) (s
 	}
 
 	// step 5. check the uid in the same home and status ok
-	memberManager := NewMemberManager(this.store)
-	member, err := memberManager.Get(domain, hid, uid)
+	member, err := this.memberManager.Get(domain, hid, uid)
 	if err != nil {
 		log.Warningf("get user member failed:domain[%s], hid[%d], uid[%d], err[%v]", domain, hid, uid, err)
 		return invalidString, invalidString, err

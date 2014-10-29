@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS `domain_device_info` (
   `did` bigint(20) NOT NULL,
   `hid` bigint(20) NOT NULL,
   `name` varchar(32) NOT NULL,
+  `type` varchar(8) NOT NULL,
   `status` int(8) NOT NULL DEFAULT '1',
   `master_did` bigint(20) NOT NULL,
   `create_time` datetime DEFAULT NULL,

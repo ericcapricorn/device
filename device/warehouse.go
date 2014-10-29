@@ -6,20 +6,20 @@ import (
 )
 
 type DeviceWarehouse struct {
-	db *warehouseProxy
+	proxy *WarehouseProxy
 }
 
 func NewDeviceWarehouse(store *DeviceStorage) *DeviceWarehouse {
-	db := newWarehouseProxy(store)
-	if db == nil {
+	proxy := newWarehouseProxy(store)
+	if proxy == nil {
 		log.Error("new WarehouseProxy failed")
 		return nil
 	}
-	return &DeviceWarehouse{db: db}
+	return &DeviceWarehouse{proxy: proxy}
 }
 
 func (this *DeviceWarehouse) Clear() {
-	this.db.Clear()
+	this.proxy.Clear()
 }
 
 // import a new device
@@ -31,7 +31,7 @@ func (this *DeviceWarehouse) Register(domain, subDomain, deviceId, publicKey str
 		log.Warningf("check public key length failed:domain[%s], device[%s:%s]", domain, subDomain, deviceId)
 		return common.ErrInvalidParam
 	}
-	err := this.db.InsertDeviceInfo(domain, subDomain, deviceId, publicKey, master)
+	err := this.proxy.InsertDeviceInfo(domain, subDomain, deviceId, publicKey, master)
 	if err != nil {
 		log.Warningf("insert device info failed:domain[%s], device[%s:%s], master[%t]",
 			domain, subDomain, deviceId, master)
@@ -42,7 +42,7 @@ func (this *DeviceWarehouse) Register(domain, subDomain, deviceId, publicKey str
 
 // if find the record return basic info + nil, if not exist, return nil + nil
 func (this *DeviceWarehouse) Get(domain, subDomain, deviceId string) (*BasicInfo, error) {
-	device, err := this.db.GetDeviceInfo(domain, subDomain, deviceId)
+	device, err := this.proxy.GetDeviceInfo(domain, subDomain, deviceId)
 	if err != nil {
 		log.Warningf("get device info failed:domain[%s], device[%s:%s]", domain, subDomain, deviceId)
 		return nil, err
@@ -50,9 +50,7 @@ func (this *DeviceWarehouse) Get(domain, subDomain, deviceId string) (*BasicInfo
 		log.Warningf("not find the device info:domain[%s], device[%s:%s]", domain, subDomain, deviceId)
 		return nil, nil
 	}
-	if device.Validate() {
-		return device, nil
-	} else {
+	if !device.Validate() {
 		log.Errorf("validate device info failed:domain[%s], device[%s:%s]", domain, subDomain, deviceId)
 		return nil, common.ErrInvalidDevice
 	}
@@ -62,7 +60,7 @@ func (this *DeviceWarehouse) Get(domain, subDomain, deviceId string) (*BasicInfo
 // WARNING: must be cautious for using this interface
 // delete the device only for not online device
 func (this *DeviceWarehouse) Delete(domain, subDomain, deviceId string) error {
-	err := this.db.DeleteDeviceInfo(domain, subDomain, deviceId)
+	err := this.proxy.DeleteDeviceInfo(domain, subDomain, deviceId)
 	if err != nil {
 		log.Warningf("delete the device failed:domain[%s], device[%s:%s]", domain, subDomain, deviceId)
 		return err
